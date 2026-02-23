@@ -58,7 +58,7 @@ SHOW USER FUNCTIONS LIKE '<function_name>' IN SCHEMA <database>.<schema>;
 
 **Goal:** Ensure logs are being collected
 
-**Load reference:** [../references/observability-parameters.md](../references/observability-parameters.md)
+**Load reference:** [../../shared/references/observability-parameters.md](../../shared/references/observability-parameters.md)
 
 **Check event table and levels:**
 ```sql
@@ -181,7 +181,7 @@ Return to Step 2 to enable telemetry, then ask user to:
 
 **Goal:** Retrieve logs from the target UDF
 
-**Load reference:** [../references/event-table-columns.md](../references/event-table-columns.md)
+**Load reference:** [../../shared/references/event-table-columns.md](../../shared/references/event-table-columns.md)
 
 **Base query for logs:**
 ```sql

@@ -53,7 +53,7 @@ Main skill routes here when user wants to:
 
 **Goal:** Verify that telemetry collection is enabled at appropriate levels
 
-**Load reference:** [../references/observability-parameters.md](../references/observability-parameters.md)
+**Load reference:** [../../shared/references/observability-parameters.md](../../shared/references/observability-parameters.md)
 
 **Actions:**
 

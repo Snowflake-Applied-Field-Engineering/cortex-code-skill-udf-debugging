@@ -172,7 +172,7 @@ def handler(value):
 
 ## Setting LOG_LEVEL on UDF
 
-> 📖 **See [observability-parameters.md](observability-parameters.md)** for comprehensive documentation on LOG_LEVEL, METRIC_LEVEL, TRACE_LEVEL, and SQL_TRACE_QUERY_TEXT parameters including values, scopes, and privileges.
+> 📖 **See [observability-parameters.md](../../shared/references/observability-parameters.md)** for comprehensive documentation on LOG_LEVEL, METRIC_LEVEL, TRACE_LEVEL, and SQL_TRACE_QUERY_TEXT parameters including values, scopes, and privileges.
 
 The UDF's LOG_LEVEL determines what messages are captured:
 

@@ -125,8 +125,8 @@ This ensures:
 
 | Reference | Content |
 |-----------|---------|
-| [references/observability-parameters.md](references/observability-parameters.md) | LOG_LEVEL, METRIC_LEVEL, TRACE_LEVEL, SQL_TRACE_QUERY_TEXT |
-| [references/event-table-columns.md](references/event-table-columns.md) | Event table schema and column descriptions |
+| [references/observability-parameters.md](../shared/references/observability-parameters.md) | LOG_LEVEL, METRIC_LEVEL, TRACE_LEVEL, SQL_TRACE_QUERY_TEXT |
+| [references/event-table-columns.md](../shared/references/event-table-columns.md) | Event table schema and column descriptions |
 | [references/python-logging.md](references/python-logging.md) | Logging, custom traces, span attributes, and events |
 | [references/error-patterns.md](references/error-patterns.md) | Common Snowpark errors and fixes |
 
@@ -155,7 +155,7 @@ Levels can be set at multiple scopes and override each other:
 
 When set at multiple levels, the **more verbose** level wins.
 
-See [references/observability-parameters.md](references/observability-parameters.md) for detailed parameter documentation.
+See [../shared/references/observability-parameters.md](../shared/references/observability-parameters.md) for detailed parameter documentation.
 
 ### Default Event Table
 
