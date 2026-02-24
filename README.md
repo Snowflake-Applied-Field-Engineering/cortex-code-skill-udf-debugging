@@ -1,12 +1,4 @@
-# Cortex Code Skills - Snowflake Applied Field Engineering
-
-A collection of skills developed by members of the Snowflake Applied Field Engineering team for [Cortex Code](https://docs.snowflake.com/en/user-guide/cortex-code/cortex-code), Snowflake's AI coding assistant.
-
-[Skills](https://docs.snowflake.com/en/user-guide/cortex-code/extensibility#skills) are structured workflows that extend Cortex Code's capabilities with domain-specific guidance, decision trees, SQL templates, and reference material.
-
-## Available Skills
-
-### UDF Debugging (`udf-debugging/`)
+# UDF Debugging Cortex Code Skill
 
 Debug Snowpark User-Defined Functions using Snowflake Event Tables. This skill provides guided workflows for:
 
@@ -38,15 +30,6 @@ Each skill follows a standard layout:
 ```
 
 `SKILL.md` files use YAML frontmatter (`name`, `description`, `parent_skill`) and define structured workflows with mandatory stopping points where user confirmation is required before executing mutations.
-
-## Contributing
-
-To add a new skill, create a directory at the repository root with a `SKILL.md` entry point following the structure above. Skills should:
-
-- Detect user intent and route to focused sub-skills
-- Include stopping points before any mutations (ALTER, CREATE, DROP statements)
-- Provide reference documents for complex domain knowledge
-- Use YAML frontmatter for metadata
 
 ## License
 
