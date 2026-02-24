@@ -138,7 +138,7 @@ This ensures:
 
 | Reference | Content |
 |-----------|---------|
-| [references/observability-parameters.md](references/observability-parameters.md) | LOG_LEVEL, METRIC_LEVEL, TRACE_LEVEL, SQL_TRACE_QUERY_TEXT |
+| [references/observability-parameters.md](references/observability-parameters.md) | Snowflake Parameters: EVENT_TABLE, LOG_LEVEL, METRIC_LEVEL, TRACE_LEVEL, SQL_TRACE_QUERY_TEXT |
 | [references/event-table-columns.md](references/event-table-columns.md) | Event table schema and column descriptions |
 | [references/python-logging.md](references/python-logging.md) | Logging, custom traces, span attributes, and events |
 | [references/error-patterns.md](references/error-patterns.md) | Common Snowpark errors and fixes |

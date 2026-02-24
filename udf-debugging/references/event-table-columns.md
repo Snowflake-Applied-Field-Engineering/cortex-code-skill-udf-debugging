@@ -136,3 +136,7 @@ FROM <event_table>
 WHERE RECORD_TYPE = 'SPAN'
 ORDER BY START_TIMESTAMP DESC;
 ```
+
+## References
+
+- [Event table columns | Snowflake Documentation](https://docs.snowflake.com/en/developer-guide/logging-tracing/event-table-column)

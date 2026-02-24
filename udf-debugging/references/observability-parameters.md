@@ -6,10 +6,66 @@ This reference covers the Snowflake parameters that control logging, metrics, an
 
 | Parameter | Purpose | Type | Default |
 |-----------|---------|------|---------|
+| [EVENT_TABLE](#event_table) | Specifies the event table for logging messages | Object | None |
 | [LOG_LEVEL](#log_level) | Controls which log messages are captured | Object | `OFF` |
 | [METRIC_LEVEL](#metric_level) | Controls metrics collection | Object | `NONE` |
 | [TRACE_LEVEL](#trace_level) | Controls trace/span collection | Object | `OFF` |
 | [SQL_TRACE_QUERY_TEXT](#sql_trace_query_text) | Whether to capture SQL text in traces | Account | `OFF` |
+
+---
+
+## EVENT_TABLE
+
+Specifies the name of the event table for logging messages from stored procedures and UDFs contained by the object with which the event table is associated.
+
+> **Note**: Associating an event table with a database is available in Enterprise Edition or higher.
+
+**Documentation**: [EVENT_TABLE Parameter](https://docs.snowflake.com/en/sql-reference/parameters#event-table)
+
+### Values
+
+Any existing event table created by executing the `CREATE EVENT TABLE` command.
+
+**Default**: None
+
+> **Note**: While not set as the default value for this parameter, every Snowflake account contains an event table at `SNOWFLAKE.TELEMETRY.EVENTS`. This table should be considered the de-facto default table.
+
+### Can Be Set At
+
+- Account
+- Database
+
+### Setting EVENT_TABLE
+
+```sql
+-- Account level (all objects in the account log to this event table)
+ALTER ACCOUNT SET EVENT_TABLE = 'my_db.my_schema.my_event_table';
+
+-- Database level (Enterprise Edition or higher)
+ALTER DATABASE my_db SET EVENT_TABLE = 'my_db.my_schema.my_event_table';
+```
+
+### Checking Current Value
+
+```sql
+SHOW PARAMETERS LIKE 'EVENT_TABLE' IN ACCOUNT;
+SHOW PARAMETERS LIKE 'EVENT_TABLE' IN DATABASE my_db;
+```
+
+### Required Privileges
+
+| Scope | Required Privilege |
+|-------|-------------------|
+| Account | `ACCOUNTADMIN` role or `MODIFY` on account |
+| Database | `MODIFY` on database |
+
+### Prerequisites
+
+If using a custom event table instead of the pre-existing `SNOWFLAKE.TELEMETRY.EVENTS` table, the custom event table must be created before setting the EVENT_TABLE parameter:
+
+```sql
+CREATE EVENT TABLE IF NOT EXISTS my_db.my_schema.my_event_table;
+```
 
 ---
 
@@ -256,6 +312,7 @@ ALTER FUNCTION my_db.my_schema.my_udf(VARCHAR) SET TRACE_LEVEL = 'ALWAYS';
 
 ```sql
 -- Check account-level settings
+SHOW PARAMETERS LIKE 'EVENT_TABLE' IN ACCOUNT;
 SHOW PARAMETERS LIKE 'LOG_LEVEL' IN ACCOUNT;
 SHOW PARAMETERS LIKE 'METRIC_LEVEL' IN ACCOUNT;
 SHOW PARAMETERS LIKE 'TRACE_LEVEL' IN ACCOUNT;
@@ -272,15 +329,20 @@ SHOW PARAMETERS LIKE 'TRACE_LEVEL' IN FUNCTION my_db.my_schema.my_udf(VARCHAR);
 
 ### No Logs Appearing
 
-1. Check LOG_LEVEL is not `OFF`:
+1. Check an event table is configured:
+   ```sql
+   SHOW PARAMETERS LIKE 'EVENT_TABLE' IN ACCOUNT;
+   ```
+
+2. Check LOG_LEVEL is not `OFF`:
    ```sql
    SHOW PARAMETERS LIKE 'LOG_LEVEL' IN ACCOUNT;
    SHOW PARAMETERS LIKE 'LOG_LEVEL' IN FUNCTION <fn>;
    ```
 
-2. Verify the UDF has logging statements in code
+3. Verify the UDF has logging statements in code
 
-3. Check event table has data:
+4. Check event table has data:
    ```sql
    SELECT COUNT(*) FROM SNOWFLAKE.TELEMETRY.EVENTS
    WHERE TIMESTAMP > DATEADD('hour', -1, CURRENT_TIMESTAMP());
@@ -317,3 +379,7 @@ SELECT CURRENT_ROLE();
 -- Request account-level privileges from admin
 -- Or use object-level settings which require only MODIFY on the object
 ```
+
+## References
+
+- [Parameters | SQL Reference | Snowflake Documentation](https://docs.snowflake.com/en/sql-reference/parameter)
