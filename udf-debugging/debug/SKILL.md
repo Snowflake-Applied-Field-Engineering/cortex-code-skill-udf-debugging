@@ -58,6 +58,8 @@ SHOW USER FUNCTIONS LIKE '<function_name>' IN SCHEMA <database>.<schema>;
 
 **Goal:** Ensure logs, metrics, and traces are being collected
 
+**⚠️ CRITICAL RULE: You MUST present account-level enablement BEFORE any session-level or function-level overrides. NEVER skip to session-level telemetry when account-level is OFF. Session/function-level are supplements for verbosity, NOT replacements for account-level baselines.**
+
 **Load reference:** [../references/observability-parameters.md](../references/observability-parameters.md)
 
 **Check event table and levels:**
@@ -71,9 +73,11 @@ SHOW PARAMETERS LIKE 'METRIC_LEVEL' IN ACCOUNT;
 SHOW PARAMETERS LIKE 'TRACE_LEVEL' IN ACCOUNT;
 ```
 
-**If telemetry levels are disabled at account level (LOG_LEVEL = OFF, METRIC_LEVEL = NONE, TRACE_LEVEL = OFF):**
+**If any telemetry level is disabled at account level (LOG_LEVEL = OFF, METRIC_LEVEL = NONE, or TRACE_LEVEL = OFF):**
 
-**⚠️ STOPPING POINT**: Present this to the user:
+**⚠️ MANDATORY STOPPING POINT — Do NOT proceed to Step 3. Do NOT use session-level as a substitute. Present account-level enablement and wait for user response.**
+
+Present this to the user:
 
 ---
 
@@ -123,6 +127,8 @@ Note: Function-level overrides must be reverted when debugging is complete.
 **Based on user's choice:**
 - **Account-level** → Execute account-level SQL (with confirmation), then continue to Step 3
 - **Lacks privileges** → Execute function-level SQL as workaround (with confirmation), then continue to Step 3
+
+**⚠️ GUARD: If any of LOG_LEVEL, METRIC_LEVEL, or TRACE_LEVEL are still OFF/NONE at the account level and user has NOT explicitly declined due to lack of privileges, do NOT proceed to Step 3. Loop back and present account-level enablement again.**
 
 **If event table not configured:**
 > Load the full setup workflow: **-> Load**: [../setup/SKILL.md](../setup/SKILL.md)

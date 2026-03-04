@@ -141,6 +141,8 @@ ALTER ACCOUNT SET TRACE_LEVEL = 'ALWAYS';
 
 **⚠️ MANDATORY STOPPING POINT**: Present this to the user:
 
+**NEVER suggest session-level or function-level telemetry as a *replacement* for account-level. Session/function-level are *supplements* for higher verbosity, not alternatives to account-level enablement.**
+
 ---
 
 **Telemetry collection is currently disabled at the account level.**

@@ -49,27 +49,48 @@ When a user makes a request, detect their intent and route to the appropriate su
 User Request
     |
     v
-+-------------------+
-| Detect Intent     |
-+-------------------+
++-----------------------------+
+| Run Quick Diagnostic Queries|
+| (check telemetry levels)    |
++-----------------------------+
     |
-    +---> SETUP (enable logging, configure telemetry)
-    |         |
-    |         v
-    |     Load setup/SKILL.md
-    |         - Detect event table config
-    |         - Check telemetry levels
-    |         - Guide setup if needed
-    |
-    +---> DEBUG (query logs, troubleshoot UDF)
-              |
-              v
-          Load debug/SKILL.md
-              - Verify event table exists
-              - Query logs for UDF
-              - Analyze errors
-              - Suggest fixes
+    v
++-----------------------------+
+| Account-level telemetry OFF?|
++-----------------------------+
+    |               |
+   YES              NO
+    |               |
+    v               v
+  ⚠️ STOP       Detect Intent
+  Present          |
+  account-level    +---> SETUP → Load setup/SKILL.md
+  enablement       |
+  FIRST.           +---> DEBUG → Load debug/SKILL.md
+  Wait for user.
+  THEN route
+  to intent.
 ```
+
+### ⚠️ MANDATORY: Account-Level Telemetry Gate
+
+**Before routing to ANY sub-skill (SETUP or DEBUG), you MUST check account-level telemetry.**
+
+Run the Quick Diagnostic Queries below. If **any** of `LOG_LEVEL = OFF`, `METRIC_LEVEL = NONE`, or `TRACE_LEVEL = OFF` at the account level:
+
+1. **STOP** — Do NOT proceed to any sub-skill workflow
+2. **Present account-level enablement** to the user with the SQL below
+3. **Wait for user response** before continuing
+4. **NEVER use session-level or function-level telemetry as a substitute** for account-level enablement
+
+```sql
+-- Present this to the user for approval:
+ALTER ACCOUNT SET LOG_LEVEL = 'INFO';
+ALTER ACCOUNT SET METRIC_LEVEL = 'ALL';
+ALTER ACCOUNT SET TRACE_LEVEL = 'ALWAYS';
+```
+
+Only after the user has addressed account-level telemetry (enabled it, or explicitly declined due to lack of privileges) should you route to the appropriate sub-skill.
 
 ---
 
@@ -147,18 +168,25 @@ This ensures:
 
 ## ⚠️ Telemetry Scope Policy
 
-**ALWAYS enable telemetry parameters (LOG_LEVEL, TRACE_LEVEL, METRIC_LEVEL) at the ACCOUNT level. NEVER suggest database-level telemetry parameter changes.**
+**⚠️ MANDATORY STOPPING POINT: If any of LOG_LEVEL = OFF, METRIC_LEVEL = NONE, and/or TRACE_LEVEL = OFF at the account level, you MUST present account-level enablement to the user and wait for approval BEFORE doing anything else with telemetry.**
 
-To raise verbosity for debugging, override at the **session level** (preferred) or **function level**:
+**NEVER skip account-level enablement.** Session-level and function-level telemetry are **supplements** for raising verbosity during debugging — they are NOT replacements for account-level baselines. NEVER suggest session-level or function-level as an alternative to account-level enablement.
+
+**NEVER suggest database-level telemetry parameter changes.**
+
+**Required two-step pattern:**
 
 ```sql
--- Account level: set a baseline (e.g., INFO)
+-- Step 1 (REQUIRED): Account level baseline — MUST be presented first
 ALTER ACCOUNT SET LOG_LEVEL = 'INFO';
+ALTER ACCOUNT SET METRIC_LEVEL = 'ALL';
+ALTER ACCOUNT SET TRACE_LEVEL = 'ALWAYS';
 
--- Option 1 (preferred): Session-level override — automatically expires when session ends
+-- Step 2 (optional): Raise verbosity for this debugging session
+-- Option A (preferred): Session-level override — automatically expires when session ends
 ALTER SESSION SET LOG_LEVEL = 'DEBUG';
 
--- Option 2: Function-level override — must be reverted when debugging is complete
+-- Option B: Function-level override — must be reverted when debugging is complete
 ALTER FUNCTION db.schema.my_udf(VARCHAR) SET LOG_LEVEL = 'DEBUG';
 -- After debugging:
 ALTER FUNCTION db.schema.my_udf(VARCHAR) UNSET LOG_LEVEL;
@@ -169,6 +197,8 @@ This pattern ensures:
 - Debugging sessions get more verbose output without affecting the account-wide setting permanently
 - No per-database telemetry configuration drift
 - Session-level is preferred because it auto-expires; function-level overrides persist and must be manually reverted
+
+**If the user lacks account-level privileges:** Direct them to request privileges from an admin (see setup/SKILL.md Step 4D). Only then fall back to function-level as a temporary workaround.
 
 ---
 
@@ -243,6 +273,7 @@ See [references/python-logging.md](references/python-logging.md) for complete ex
 All sub-skills follow this philosophy: **NO changes without explicit user approval.**
 
 - **READ-ONLY queries**: Can run freely (diagnostics, log queries)
+- **⚠️ BEFORE ANY telemetry changes**: If any of `LOG_LEVEL = OFF`, `METRIC_LEVEL = NONE`, and/or `TRACE_LEVEL = OFF` at the account-level, you MUST present account-level enablement first. NEVER jump to session-level or function-level as a shortcut.
 - **ANY mutation**: Requires stopping point and user approval
   - Enabling telemetry collection
   - Modifying LOG_LEVEL/METRIC_LEVEL/TRACE_LEVEL
