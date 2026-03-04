@@ -31,20 +31,12 @@ Main skill routes here when user wants to:
    SHOW PARAMETERS LIKE 'EVENT_TABLE' IN ACCOUNT;
    ```
 
-2. **If user has a specific database in mind, check database-level**:
-   ```sql
-   SHOW PARAMETERS LIKE 'EVENT_TABLE' IN DATABASE <database_name>;
-   ```
-
-3. **Explain precedence to user**:
-   > Event table precedence: **Database > Account**
-   >
-   > If a database has its own event table, objects in that database write there.
-   > Otherwise, they write to the account-level event table.
+2. **Explain to user**:
+   > All Snowflake accounts include `SNOWFLAKE.TELEMETRY.EVENTS` by default.
+   > This is the recommended event table for most use cases.
 
 **Present findings**:
 - Account event table: `<value or "Not configured">`
-- Database event table (if checked): `<value or "Not configured">`
 - Effective event table for target UDF: `<determined value>`
 
 ---
@@ -105,7 +97,7 @@ Based on Steps 1-2, determine the situation:
 |-----------|--------|
 | No event table configured | Go to Step 4A |
 | Event table exists but telemetry levels disabled at account | Go to Step 4B (present options) |
-| Account levels enabled but UDF needs more verbose level | Go to Step 4C |
+| Account levels enabled but need more verbose level for debugging | Go to Step 4C |
 | Everything configured correctly | Go to Step 5 (verification) |
 
 ---
@@ -145,20 +137,20 @@ ALTER ACCOUNT SET TRACE_LEVEL = 'ALWAYS';
 
 ### Step 4B: Telemetry Levels Disabled - Present Options
 
-**Goal:** When telemetry collection is disabled at account level, offer the user a choice
+**Goal:** When telemetry collection is disabled at account level, enable it at account level
 
-**⚠️ MANDATORY STOPPING POINT**: Present these options to the user:
+**⚠️ MANDATORY STOPPING POINT**: Present this to the user:
 
 ---
 
 **Telemetry collection is currently disabled at the account level.**
 
-I recommend enabling telemetry at the **account level** as this is the best practice:
+I recommend enabling telemetry at the **account level**:
 - Applies to all UDFs/procedures automatically
 - No need to configure each object individually
 - Centralized management of telemetry settings
 
-**Option A: Enable at Account Level (Recommended)**
+**Enable at Account Level:**
 
 ```sql
 ALTER ACCOUNT SET LOG_LEVEL = 'INFO';
@@ -168,38 +160,31 @@ ALTER ACCOUNT SET TRACE_LEVEL = 'ALWAYS';
 
 Required privileges: `MODIFY LOG LEVEL ON ACCOUNT`, `MODIFY METRIC LEVEL ON ACCOUNT`, `MODIFY TRACE LEVEL ON ACCOUNT` (typically ACCOUNTADMIN)
 
-**Option B: Enable at Object Level Only**
-
-If you don't want to change account-level settings or lack permissions, I can enable telemetry on the specific UDF only:
+**Then, to raise verbosity for this debugging session:**
 
 ```sql
+-- Option 1 (preferred): Session-level override — auto-expires when session ends
+ALTER SESSION SET LOG_LEVEL = 'DEBUG';
+
+-- Option 2: Function-level override — must be reverted when debugging is complete
 ALTER FUNCTION <db.schema.fn_name>(<param_types>) SET LOG_LEVEL = 'DEBUG';
-ALTER FUNCTION <db.schema.fn_name>(<param_types>) SET TRACE_LEVEL = 'ALWAYS';
 ```
 
-Required privileges: `MODIFY` on the function, `USAGE` on database and schema
+---
 
-**Option C: Request Admin to Enable Account-Level**
-
-I can generate a message you can send to your admin requesting account-level telemetry.
+**If user lacks account-level privileges:**
+- Go to Step 4D to generate an admin permission request
+- In the meantime, function-level settings can be used as a workaround (go to Step 4B-Fallback)
 
 ---
 
-**Based on user's choice:**
-- **Option A** → Execute account-level SQL (with confirmation)
-- **Option B** → Go to Step 4B-Fallback
-- **Option C** → Go to Step 4D
+### Step 4B-Fallback: Enable Telemetry at Function Level (Workaround)
 
----
-
-### Step 4B-Fallback: Enable Telemetry at Object Level
-
-**Goal:** Enable telemetry on the specific UDF when account-level is not an option
+**Goal:** Enable telemetry on the specific UDF when user lacks account-level privileges
 
 **When to use:**
-- User chose Option B (prefers object-level)
-- User lacks account-level permissions
-- User wants to limit telemetry to specific objects
+- User lacks account-level permissions and cannot get them
+- Temporary workaround until admin enables account-level telemetry
 
 **Proposed SQL:**
 ```sql
@@ -214,32 +199,39 @@ ALTER FUNCTION <db.schema.fn_name>(<param_types>) SET TRACE_LEVEL = 'ALWAYS';
 - `MODIFY` on the function
 - `USAGE` on the database and schema
 
-**Note:** Object-level settings take effect even when account-level is OFF. When both are set, the more verbose level wins.
-
 **⚠️ MANDATORY STOPPING POINT**: Ask user to confirm before executing.
 
-**Inform user of limitation:**
-> With object-level only, you'll need to set these parameters on each UDF you want to debug. Consider requesting account-level enablement from an admin for easier management.
+**Inform user of limitations:**
+> With function-level only, you'll need to set these parameters on each UDF you want to debug, and **you must revert them when debugging is complete** (e.g., `ALTER FUNCTION ... UNSET LOG_LEVEL;`). Request account-level enablement from an admin for a permanent solution.
 
 ---
 
-### Step 4C: Adjust UDF-Specific Log Level
+### Step 4C: Raise Verbosity for Debugging
 
-**Goal:** Ensure the target UDF has an appropriate log level
+**Goal:** Override the account-level log level with a more verbose level for debugging
 
-If the account/database level is restrictive (e.g., ERROR) but user wants more verbose logging for a specific UDF:
+If the account level is set (e.g., INFO) but the user needs more verbose logging (e.g., DEBUG) for debugging:
 
-**Proposed SQL:**
+**Option 1 (Preferred): Session-level override**
 ```sql
--- Set log level on specific function
+-- Automatically expires when the session ends — no cleanup needed
+ALTER SESSION SET LOG_LEVEL = 'DEBUG';
+```
+
+**Option 2: Function-level override**
+```sql
+-- Set on specific function — must be reverted when debugging is complete
 ALTER FUNCTION <db.schema.fn_name>(<param_types>) SET LOG_LEVEL = 'DEBUG';
 ```
 
-**Required privileges:**
+**Required privileges (Option 2):**
 - `MODIFY` on the function
 - `USAGE` on the database and schema
 
-**Note:** Object-level LOG_LEVEL takes precedence over account level. When both session and object levels apply, the more verbose wins.
+**Note:** When set at multiple levels, the more verbose level wins. Session-level is preferred because it auto-expires. If using function-level, remind the user to revert after debugging:
+```sql
+ALTER FUNCTION <db.schema.fn_name>(<param_types>) UNSET LOG_LEVEL;
+```
 
 **⚠️ MANDATORY STOPPING POINT**: Ask user to confirm before executing.
 
@@ -394,7 +386,7 @@ ALTER DATABASE <db> SET LOG_LEVEL = 'INFO';
 ## Stopping Points Summary
 
 1. ✋ Before executing any `ALTER ACCOUNT SET` command
-2. ✋ When telemetry is disabled at account level - present options (account vs object level)
+2. ✋ When telemetry is disabled at account level - present account-level enablement
 3. ✋ Before executing any `ALTER FUNCTION SET` command
 4. ✋ Before executing any `ALTER DATABASE SET` command
 5. ✋ When generating admin permission request
@@ -405,7 +397,7 @@ ALTER DATABASE <db> SET LOG_LEVEL = 'INFO';
 ## Output
 
 - Clear summary of current event table configuration
-- Telemetry level status at account and object levels
+- Telemetry level status at account and function levels
 - SQL scripts for enabling telemetry (with user approval)
 - Admin request message if permissions are lacking
 - Verification that configuration is working

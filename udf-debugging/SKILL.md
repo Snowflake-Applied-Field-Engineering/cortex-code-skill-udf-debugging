@@ -145,6 +145,33 @@ This ensures:
 
 ---
 
+## ⚠️ Telemetry Scope Policy
+
+**ALWAYS enable telemetry parameters (LOG_LEVEL, TRACE_LEVEL, METRIC_LEVEL) at the ACCOUNT level. NEVER suggest database-level telemetry parameter changes.**
+
+To raise verbosity for debugging, override at the **session level** (preferred) or **function level**:
+
+```sql
+-- Account level: set a baseline (e.g., INFO)
+ALTER ACCOUNT SET LOG_LEVEL = 'INFO';
+
+-- Option 1 (preferred): Session-level override — automatically expires when session ends
+ALTER SESSION SET LOG_LEVEL = 'DEBUG';
+
+-- Option 2: Function-level override — must be reverted when debugging is complete
+ALTER FUNCTION db.schema.my_udf(VARCHAR) SET LOG_LEVEL = 'DEBUG';
+-- After debugging:
+ALTER FUNCTION db.schema.my_udf(VARCHAR) UNSET LOG_LEVEL;
+```
+
+This pattern ensures:
+- All UDFs/procedures are covered by default at the account level
+- Debugging sessions get more verbose output without affecting the account-wide setting permanently
+- No per-database telemetry configuration drift
+- Session-level is preferred because it auto-expires; function-level overrides persist and must be manually reverted
+
+---
+
 ## Key Concepts
 
 ### Event Table Precedence
@@ -157,7 +184,7 @@ Database Event Table > Account Event Table
 
 - If a database has an associated event table, objects in that database write to the database's event table
 - Other databases without their own event table write to the account-level event table
-- **Recommendation**: Use account-level event tables unless you have specific governance requirements
+- **Recommendation**: Use the default account-level event table (`SNOWFLAKE.TELEMETRY.EVENTS`)
 
 ### Telemetry Level Hierarchy
 
@@ -166,7 +193,7 @@ Levels can be set at multiple scopes and override each other:
 **Session parameters**: Account > User > Session
 **Object parameters**: Account > Database > Schema > Object (UDF/procedure)
 
-When set at multiple levels, the **more verbose** level wins.
+When set at multiple levels, the **more verbose** level wins. This means a `DEBUG` session-level setting will capture more than an `INFO` account-level setting.
 
 See [references/observability-parameters.md](references/observability-parameters.md) for detailed parameter documentation.
 

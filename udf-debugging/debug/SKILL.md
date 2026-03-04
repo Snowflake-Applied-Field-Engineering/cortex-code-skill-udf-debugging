@@ -64,33 +64,27 @@ SHOW USER FUNCTIONS LIKE '<function_name>' IN SCHEMA <database>.<schema>;
 ```sql
 -- Check what event table is active
 SHOW PARAMETERS LIKE 'EVENT_TABLE' IN ACCOUNT;
-SHOW PARAMETERS LIKE 'EVENT_TABLE' IN DATABASE <database>;
 
 -- Check telemetry levels at account
 SHOW PARAMETERS LIKE 'LOG_LEVEL' IN ACCOUNT;
 SHOW PARAMETERS LIKE 'METRIC_LEVEL' IN ACCOUNT;
 SHOW PARAMETERS LIKE 'TRACE_LEVEL' IN ACCOUNT;
-
--- Check telemetry levels on the specific UDF
-SHOW PARAMETERS LIKE 'LOG_LEVEL' IN FUNCTION <db.schema.fn>(<types>);
-SHOW PARAMETERS LIKE 'METRIC_LEVEL' IN FUNCTION <db.schema.fn>(<types>);
-SHOW PARAMETERS LIKE 'TRACE_LEVEL' IN FUNCTION <db.schema.fn>(<types>);
 ```
 
 **If telemetry levels are disabled at account level (LOG_LEVEL = OFF, METRIC_LEVEL = NONE, TRACE_LEVEL = OFF):**
 
-**⚠️ STOPPING POINT**: Present these options to the user:
+**⚠️ STOPPING POINT**: Present this to the user:
 
 ---
 
 **Telemetry collection is disabled at the account level.**
 
-I recommend enabling at the **account level** as a best practice, but you can also enable on just this UDF.
-
-**Option A: Enable at Account Level (Recommended)**
+I recommend enabling at the **account level**:
 - Applies to all UDFs/procedures automatically
 - No need to configure each object individually
-- Requires ACCOUNTADMIN or delegated privileges
+- Centralized management of telemetry settings
+
+**Enable at Account Level:**
 
 ```sql
 ALTER ACCOUNT SET LOG_LEVEL = 'INFO';
@@ -98,9 +92,23 @@ ALTER ACCOUNT SET METRIC_LEVEL = 'ALL';
 ALTER ACCOUNT SET TRACE_LEVEL = 'ALWAYS';
 ```
 
-**Option B: Enable on This UDF Only**
-- If you don't want to change account settings or lack permissions
-- You'll need to repeat this for each UDF you want to debug
+Requires ACCOUNTADMIN or delegated privileges.
+
+**Then, to raise verbosity for this debugging session:**
+
+```sql
+-- Option 1 (preferred): Session-level override — auto-expires when session ends
+ALTER SESSION SET LOG_LEVEL = 'DEBUG';
+
+-- Option 2: Function-level override — must be reverted when debugging is complete
+ALTER FUNCTION <db.schema.fn>(<types>) SET LOG_LEVEL = 'DEBUG';
+```
+
+---
+
+**If user lacks account-level privileges:**
+- Load [../setup/SKILL.md](../setup/SKILL.md) Step 4D for admin request template
+- In the meantime, function-level settings can be used as a workaround:
 
 ```sql
 ALTER FUNCTION <db.schema.fn>(<types>) SET LOG_LEVEL = 'DEBUG';
@@ -108,15 +116,13 @@ ALTER FUNCTION <db.schema.fn>(<types>) SET METRIC_LEVEL = 'ALL';
 ALTER FUNCTION <db.schema.fn>(<types>) SET TRACE_LEVEL = 'ALWAYS';
 ```
 
-**Option C: Request Admin to Enable Account-Level**
-- I can generate a message to send to your admin
+Note: Function-level overrides must be reverted when debugging is complete.
 
 ---
 
 **Based on user's choice:**
-- **Option A** → Execute account-level SQL (with confirmation), then continue to Step 3
-- **Option B** → Execute object-level SQL (with confirmation), then continue to Step 3
-- **Option C** → Load [../setup/SKILL.md](../setup/SKILL.md) Step 4D for admin request template
+- **Account-level** → Execute account-level SQL (with confirmation), then continue to Step 3
+- **Lacks privileges** → Execute function-level SQL as workaround (with confirmation), then continue to Step 3
 
 **If event table not configured:**
 > Load the full setup workflow: **-> Load**: [../setup/SKILL.md](../setup/SKILL.md)
@@ -518,16 +524,22 @@ def handler(input_val):
 
 #### Enable Telemetry Levels
 
-**Ensure TRACE_LEVEL is enabled to capture spans:**
-```sql
--- Enable tracing for spans (required for auto-instrumentation to appear in event table)
-ALTER FUNCTION <db.schema.fn>(<types>) SET TRACE_LEVEL = 'ALWAYS';
+**Ensure TRACE_LEVEL and LOG_LEVEL are enabled to capture spans and logs:**
 
--- Enable logging for log messages
+```sql
+-- Option 1 (preferred): Session-level override — auto-expires when session ends
+ALTER SESSION SET LOG_LEVEL = 'DEBUG';
+ALTER SESSION SET TRACE_LEVEL = 'ALWAYS';
+
+-- Option 2: Function-level override — must be reverted when debugging is complete
 ALTER FUNCTION <db.schema.fn>(<types>) SET LOG_LEVEL = 'DEBUG';
+ALTER FUNCTION <db.schema.fn>(<types>) SET TRACE_LEVEL = 'ALWAYS';
+-- After debugging:
+-- ALTER FUNCTION <db.schema.fn>(<types>) UNSET LOG_LEVEL;
+-- ALTER FUNCTION <db.schema.fn>(<types>) UNSET TRACE_LEVEL;
 ```
 
-**⚠️ STOPPING POINT**: Ask user before modifying UDF TRACE_LEVEL or LOG_LEVEL.
+**⚠️ STOPPING POINT**: Ask user before modifying telemetry levels.
 
 ---
 
@@ -571,7 +583,7 @@ LIMIT 20;
 
 ## Stopping Points Summary
 
-1. ✋ When telemetry is disabled at account level - present options (account vs object level)
+1. ✋ When telemetry is disabled at account level - present account-level enablement
 2. ✋ **MANDATORY**: When no telemetry data found - must enable collection before proceeding
 3. ✋ After presenting initial log query results (before filtering)
 4. ✋ Before suggesting fixes that require code changes

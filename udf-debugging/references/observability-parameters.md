@@ -278,33 +278,41 @@ Enable when you need to:
 
 ## Recommended Configuration
 
-### For Development/Debugging
+### Account-Level Settings
 
+These should be set once per account and left in place.
+
+**Production accounts:**
 ```sql
--- Enable comprehensive telemetry
-ALTER ACCOUNT SET LOG_LEVEL = 'DEBUG';
+ALTER ACCOUNT SET LOG_LEVEL = 'INFO';
+ALTER ACCOUNT SET METRIC_LEVEL = 'ALL';
+ALTER ACCOUNT SET TRACE_LEVEL = 'ALWAYS';
+ALTER ACCOUNT SET SQL_TRACE_QUERY_TEXT = 'OFF'; -- To prevent possibly sensitive data in SQL queries from being logged
+```
+
+**Development accounts:**
+```sql
+ALTER ACCOUNT SET LOG_LEVEL = 'DEBUG';  -- Or 'INFO' to reduce noise in favor of frequently needing to raise the level at the session/object for debugging 
 ALTER ACCOUNT SET METRIC_LEVEL = 'ALL';
 ALTER ACCOUNT SET TRACE_LEVEL = 'ALWAYS';
 ALTER ACCOUNT SET SQL_TRACE_QUERY_TEXT = 'ON';
 ```
 
-### For Production
+### Session/Function-Level Overrides (For Debugging)
+
+When additional verbosity is needed (e.g., debugging a specific UDF on a production account), override at the session or function level:
 
 ```sql
--- Enable balanced telemetry
-ALTER ACCOUNT SET LOG_LEVEL = 'INFO';
-ALTER ACCOUNT SET METRIC_LEVEL = 'ALL';
-ALTER ACCOUNT SET TRACE_LEVEL = 'ALWAYS';
--- Keep SQL_TRACE_QUERY_TEXT = 'OFF' unless needed
-```
+-- Option 1 (preferred): Session-level override — auto-expires when session ends
+ALTER SESSION SET LOG_LEVEL = 'DEBUG';
 
-### For Specific UDF Debugging
-
-```sql
--- Enable verbose logging on specific function only
+-- Option 2: Function-level override — must be reverted when debugging is complete
 ALTER FUNCTION my_db.my_schema.my_udf(VARCHAR) SET LOG_LEVEL = 'DEBUG';
-ALTER FUNCTION my_db.my_schema.my_udf(VARCHAR) SET TRACE_LEVEL = 'ALWAYS';
+-- After debugging:
+-- ALTER FUNCTION my_db.my_schema.my_udf(VARCHAR) UNSET LOG_LEVEL;
 ```
+
+These overrides take effect immediately and the more verbose level wins. Session-level is preferred because it requires no cleanup.
 
 ---
 
@@ -377,7 +385,7 @@ If you get permission errors:
 SELECT CURRENT_ROLE();
 
 -- Request account-level privileges from admin
--- Or use object-level settings which require only MODIFY on the object
+-- Or use function-level settings which require only MODIFY on the function
 ```
 
 ## References
